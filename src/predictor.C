@@ -4,14 +4,14 @@
 #define NOT_TAKEN false
 #define BUDGET    32768 // (32Kb)
 
-const static int historyLength = 32;
+const static int h = 31;
 
-//const static float theta = 1.93 * historyLength + 14;
-//const static int tableSize = pow(2,floor(log2(BUDGET/(historyLength * 8))));
-const static float theta = historyLength/2; 
-const static int tableSize = 128;
+//const static float theta = 1.93 * h + 14;
+//const static int n = pow(2,floor(log2(BUDGET/(h * 8))));
+const static float theta = h/2; 
+const static int n = 128;
 
-char W[tableSize][historyLength];
+char W[n][h+1];
 int H;
 
 int index;
@@ -19,8 +19,8 @@ int y;
 
 void init_predictor ()
 {
-    for(int i = 0; i < tableSize; i++)
-        for(int j = 0; j < historyLength; j++)
+    for(int i = 0; i < n; i++)
+        for(int j = 0; j < h; j++)
             W[i][j] = 0;
 
     H = 0;
@@ -28,27 +28,27 @@ void init_predictor ()
 
 bool make_prediction (unsigned int pc)
 {
-    y = 0;
-    
-    index = pc % tableSize;
-    for(int i = 0; i < historyLength; i++)
+    index = pc % n;
+
+    y = W[index][0];
+    for(int i = 1; i < h+1; i++)
     {
-        y += W[index][i] * (H >> (31 - i) & 1); 
+        y += W[index][i] * (H >> (h - i) & 1); 
     }
 
-    bool predict = (y > 0) ? TAKEN : NOT_TAKEN;    
-    return predict;
+    return (y > 0) ? TAKEN : NOT_TAKEN;
 }
 
 void train_predictor (unsigned int pc, bool outcome)
 {
     int t = (outcome == TAKEN) ? 1 : -1;
 
-    for(int i = 0; i < historyLength; i++)
+    if(((y < 0) != (t < 0)) || (y < theta && y > -theta))
     {
-        if(((y < 0) != (t < 0)) || (y < theta && y > -theta))
+        W[index][0] += t;
+        for(int i = 1; i < h+1; i++)
         {
-            W[index][i] += (H >> (31 - i) & 1)*t;
+            W[index][i] += (H >> (h - i) & 1)*t;
         }           
     }
     H <<= 1;
