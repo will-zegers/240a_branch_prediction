@@ -7,22 +7,14 @@
 
 const static int historyLength = 32;
 const static float theta = 1.93 * historyLength + 14;
-const static int tableSize = pow(2,floor(log2(BUDGET/(historyLength * 8))));
+const static int tableSize = 128;
+//const static int tableSize = pow(2,floor(log2(BUDGET/(historyLength * 8))));
 
 char W[tableSize][historyLength];
-bool H[historyLength];
+int H;
 
 int index;
 int y;
-
-void shiftH(bool outcome)
-{
-    for(int i = 0; i < historyLength-1; i++)
-    {
-        H[i] = H[i+1];
-    }
-    H[historyLength-1] = outcome;
-}
 
 void init_predictor ()
 {
@@ -30,8 +22,7 @@ void init_predictor ()
         for(int j = 0; j < historyLength; j++)
             W[i][j] = 0;
 
-    for(int i = 0; i < historyLength; i++) 
-        H[i] = 0;
+    H = 0;
 }
 
 bool make_prediction (unsigned int pc)
@@ -41,7 +32,7 @@ bool make_prediction (unsigned int pc)
     index = pc % tableSize;
     for(int i = 0; i < historyLength; i++)
     {
-        y += (int)W[index][i] * (int)H[i];
+        y += (int)W[index][i] * (H >> (31 - i) & 1); 
     }
 
     bool predict = (y > 0) ? TAKEN : NOT_TAKEN;    
@@ -56,8 +47,9 @@ void train_predictor (unsigned int pc, bool outcome)
     {
         if(((y < 0) != (t < 0)) || abs(y) < theta)
         {
-            W[index][i] += H[i] * t;
+            W[index][i] += (H >> (31 - i) & 1)*t;
         }           
     }
-    shiftH(outcome);
+    H <<= 1;
+    H += (int)outcome;
 }
