@@ -4,7 +4,6 @@
 #define TAKEN     true
 #define NOT_TAKEN false
 #define BUDGET    32768 // (32Kb)
-#define GSHARE    1
 
 const static int historyLength = 59;
 const static float theta = 1.93 * historyLength + 14;
@@ -49,11 +48,7 @@ bool make_prediction (unsigned int pc)
 {
     y = 0;
     
-#if GSHARE
-    index = (pc ^ boolArrayToInt(H)) % tableSize;
-#else
     index = pc % tableSize;
-#endif
     for(int i = 0; i < historyLength; i++)
     {
         y += (int)W[index][i] * (int)H[i];
