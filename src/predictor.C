@@ -5,10 +5,11 @@
 #define BUDGET    32768 // (32Kb)
 
 const static int historyLength = 32;
-const static float theta = historyLength/2; //1.93 * historyLength + 14;
+
 //const static float theta = 1.93 * historyLength + 14;
-const static int tableSize = 128;
 //const static int tableSize = pow(2,floor(log2(BUDGET/(historyLength * 8))));
+const static float theta = historyLength/2; 
+const static int tableSize = 128;
 
 char W[tableSize][historyLength];
 int H;
