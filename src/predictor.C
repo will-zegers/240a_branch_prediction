@@ -5,9 +5,9 @@
 #define NOT_TAKEN false
 #define BUDGET    32768 // (32Kb)
 
-const static int historyLength = 59;
+const static int historyLength = 32;
 const static float theta = 1.93 * historyLength + 14;
-const static int tableSize = pow(2,6);
+const static int tableSize = pow(2,floor(log2(BUDGET/(historyLength * 8))));
 
 char W[tableSize][historyLength];
 bool H[historyLength];
@@ -22,16 +22,6 @@ void shiftH(bool outcome)
         H[i] = H[i+1];
     }
     H[historyLength-1] = outcome;
-}
-
-unsigned int boolArrayToInt(bool A[])
-{
-    int h = 0;
-    for(int i = 0; i < 32; i++)
-    {
-       h |= (int)(H[historyLength-1-i] << i);
-    }
-    return h;
 }
 
 void init_predictor ()
