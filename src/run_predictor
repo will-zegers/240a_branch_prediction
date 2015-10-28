@@ -7,7 +7,7 @@ TRACES="$@"
 #        echo $f
 #    done
 #fi
-for t in ../traces/*
+for t in $TRACES
 do
     echo -e -n "$t:\t"
     OUTPUT="$(bunzip2 -c -k $t | ./predictor|awk '{print $9}')"
