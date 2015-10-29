@@ -4,42 +4,110 @@
 #define NOT_TAKEN false
 #define BUDGET    32768 // (32Kb)
 
-const static int h = 18;
-const static int n = 18;
-const static int b = 8;
-const static float theta = h/2; 
-const static int min_weight = -(1 << (b-1));
-const static int max_weight = -min_weight - 1;
+const static int h = 20;
+const static int n = 188;
+const static float theta = h/2; //2.14 * (h+1) + 20.58;
 
-bool G[h+1];
-bool SG[h+1];
-int W[n][h+1];
-int R[h+1];
-int SR[h+1];
-int v[h+1];
-int sv[h+1];
+static bool H[h+1];
+static bool G[h+1];
+static bool SG[h+1];
+static int W[n][h+1];
+static int R[h+1];
+static int SR[h+1];
+static int v[h+1];
+static int sv[h+1];
 
-int index;
-int y;
+static int i;
+static int y;
+static bool predict;
+
+void shiftBool(bool *A, bool b) {
+    for(int j = 1; j < h; j++) {
+        A[j+1] = A[j];
+    }
+    A[0] = b;
+}
+
+void shiftInt(int *A, int x) {
+    for(int j = 1; j < h; j++) {
+        A[j+1] = A[j];
+    }
+    A[0] = x;
+}
 
 void init_predictor ()
 {
-    for(int i = 0; i < h+1; i++) {
-        G[i]  = false;
-        SG[i] = false;
-        R[i]  = 0;
-        SR[i] = 0;
-        v[i]  = 0;
-        sv[i] = 0;
-        for(int j = 0; j < n; j++)
-            W[i][j] = 0;
+    for(int j = 0; j < h+1; j++) {
+        G[j]  = false;
+        SG[j] = false;
+        R[j]  = 0;
+        SR[j] = 0;
+        v[j]  = 0;
+        sv[j] = 0;
+        H[j]  = 0;
+        for(int k = 0; k < n; k++)
+            W[j][k] = 0;
+    }
 }
 
 bool make_prediction (unsigned int pc)
 {
-    return false;
+    i = pc % n;
+
+    shiftInt(sv,i);
+
+    for(int j = 0; j < h + 1; j++) {
+        v[j] = sv[j];
+        H[j] = SG[j];
+    }
+
+    y = SR[h] + W[i][0];
+    
+    predict = (y >= 0);
+    
+    for(int j = 1; j < h + 1; j++) {
+        int k = h - j;
+        if(predict == TAKEN)
+            SR[k+1] = SR[k] + W[i][j];
+        else
+            SR[k+1] = SR[k] - W[i][j];
+    }
+
+    SR[0] = 0;
+    shiftBool(SG, predict);
+
+    return predict;
 }
 
 void train_predictor (unsigned int pc, bool outcome)
 {
+    for(int j = 1; j < h + 1; j++) {
+        int k = h - j;
+        if(outcome == TAKEN)
+            R[k+1] = R[k] + W[i][j];
+        else
+            R[k+1] = R[k] - W[i][j];
+    }
+    R[0] = 0;
+
+    shiftBool(G,outcome);
+    shiftInt(v,i);
+
+    if(predict != outcome) {
+        for(int j = 0; j < h + 1; j++) {
+            SR[j] = R[j];
+            SG[j] = G[j];
+            sv[j] = v[j];
+        }
+    }
+    
+    int t = (outcome == TAKEN) ? 1 : -1;
+    if(predict != outcome || (y < theta && y > -theta)) {
+        W[i][0] = W[i][0] + t; 
+        for(int j = 1; j < h + 1; j++) {
+            int k = v[j];
+            int s = (outcome == H[j]) ? 1 : -1;
+            W[k][j] = W[k][j] + s; 
+        }
+    }       
 }
