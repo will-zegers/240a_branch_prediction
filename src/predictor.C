@@ -5,24 +5,23 @@
 #define NOT_TAKEN false
 #define BUDGET    32768 // (32Kb)
 
-const static int h = 15;
 const static int n = 128;
+const static int h = 15;
 const static float theta = h/2; //2.14 * (h+1) + 20.58;
 
-static bool G[h+1];
-static bool SG[h+1];
-static int W[n][h+1];
-static int R[h+1];
-static int SR[h+1];
-static int v[h+1];
-static int V[h+1];
-static int sv[h+1];
+int W[n][h+1];
+bool SG[h+1];
+bool G[h+1];
+int SR[h+1];
+int R[h+1];
+int v[h+1];
+int sv[h+1];
 
 typedef struct {
     int y;
     int i;
     int v[h+1];
-    int H[h+1];
+    bool H[h+1];
     bool predict;
 } Branch;
 
@@ -57,15 +56,12 @@ void shiftArray(int *A, int x) {
 void init_predictor ()
 {
     for(int j = 0; j < h+1; j++) {
-        G[j]  = false;
-        R[j]  = 0;
-        SG[j] = false;
         SR[j] = 0;
-        sv[j] = 0;
+        R[j]  = 0;
+        G[j]  = false;
+        SG[j] = false;
         v[j]  = 0;
 
-        B.v[j]  = 0;
-        B.H[j]  = 0;
         for(int k = 0; k < n; k++)
             W[j][k] = 0;
     }
