@@ -1,36 +1,55 @@
-//#include "math.h"
+#include "stdlib.h"
+#include "stdio.h"
 
 #define TAKEN     true
 #define NOT_TAKEN false
 #define BUDGET    32768 // (32Kb)
 
-const static int h = 20;
-const static int n = 188;
+const static int h = 15;
+const static int n = 128;
 const static float theta = h/2; //2.14 * (h+1) + 20.58;
 
-static bool H[h+1];
 static bool G[h+1];
 static bool SG[h+1];
 static int W[n][h+1];
 static int R[h+1];
 static int SR[h+1];
 static int v[h+1];
+static int V[h+1];
 static int sv[h+1];
 
-static int i;
-static int y;
-static bool predict;
+typedef struct {
+    int y;
+    int i;
+    int v[h+1];
+    int H[h+1];
+    bool predict;
+} Branch;
 
-void shiftBool(bool *A, bool b) {
-    for(int j = 1; j < h; j++) {
-        A[j+1] = A[j];
+Branch B;
+
+int satCnt(int w, bool inc) {
+
+    if(inc)
+        if(w < 127) w++;
+    else
+        if(w > -128) w--;
+
+    return w;
+}
+
+void shiftArray(bool *A, bool b) {
+
+    for(int j = h; j > 0; j--) {
+        A[j] = A[j-1];
     }
     A[0] = b;
 }
 
-void shiftInt(int *A, int x) {
-    for(int j = 1; j < h; j++) {
-        A[j+1] = A[j];
+void shiftArray(int *A, int x) {
+
+    for(int j = h; j > 0; j--) {
+        A[j] = A[j-1];
     }
     A[0] = x;
 }
@@ -39,12 +58,14 @@ void init_predictor ()
 {
     for(int j = 0; j < h+1; j++) {
         G[j]  = false;
-        SG[j] = false;
         R[j]  = 0;
+        SG[j] = false;
         SR[j] = 0;
-        v[j]  = 0;
         sv[j] = 0;
-        H[j]  = 0;
+        v[j]  = 0;
+
+        B.v[j]  = 0;
+        B.H[j]  = 0;
         for(int k = 0; k < n; k++)
             W[j][k] = 0;
     }
@@ -52,18 +73,18 @@ void init_predictor ()
 
 bool make_prediction (unsigned int pc)
 {
-    i = pc % n;
+    int i = pc % n;
 
-    shiftInt(sv,i);
+    shiftArray(sv,i);
 
     for(int j = 0; j < h + 1; j++) {
-        v[j] = sv[j];
-        H[j] = SG[j];
+        B.v[j] = sv[j];
+        B.H[j] = SG[j];
     }
 
-    y = SR[h] + W[i][0];
+    int y = SR[h] + W[i][0];
     
-    predict = (y >= 0);
+    bool predict = (y >= 0);
     
     for(int j = 1; j < h + 1; j++) {
         int k = h - j;
@@ -74,15 +95,24 @@ bool make_prediction (unsigned int pc)
     }
 
     SR[0] = 0;
-    shiftBool(SG, predict);
+    shiftArray(SG, predict);
+
+    B.y = y;
+    B.i = i;
+    B.predict = predict;
 
     return predict;
 }
 
 void train_predictor (unsigned int pc, bool outcome)
 {
+
+    int i = B.i;
+    int y = B.y;
+
+    int k;
     for(int j = 1; j < h + 1; j++) {
-        int k = h - j;
+        k = h - j;
         if(outcome == TAKEN)
             R[k+1] = R[k] + W[i][j];
         else
@@ -90,24 +120,22 @@ void train_predictor (unsigned int pc, bool outcome)
     }
     R[0] = 0;
 
-    shiftBool(G,outcome);
-    shiftInt(v,i);
+    shiftArray(G,outcome);
+    shiftArray(v,B.i);
 
-    if(predict != outcome) {
+    if(B.predict != outcome) {
         for(int j = 0; j < h + 1; j++) {
             SR[j] = R[j];
             SG[j] = G[j];
             sv[j] = v[j];
         }
     }
-    
-    int t = (outcome == TAKEN) ? 1 : -1;
-    if(predict != outcome || (y < theta && y > -theta)) {
-        W[i][0] = W[i][0] + t; 
+
+    if(B.predict != outcome || (y < theta && y > -theta)) {
+        W[i][0] = satCnt(W[i][0],outcome); 
         for(int j = 1; j < h + 1; j++) {
-            int k = v[j];
-            int s = (outcome == H[j]) ? 1 : -1;
-            W[k][j] = W[k][j] + s; 
+            k = B.v[j];
+            W[k][j] = satCnt(W[k][j],outcome == B.H[j]); 
         }
     }       
 }
